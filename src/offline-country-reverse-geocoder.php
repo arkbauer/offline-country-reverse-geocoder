@@ -2,20 +2,8 @@
 
 namespace DaveRoss\OfflineCountryReverseGeocoder;
 
-class FileException extends \Exception {
-}
-
-;
-
-/**
- * Retrieve an array of country codes & the corresponding coordinates
- * for their borders.
- * @return array
- * @throws FileException
- */
 function countries_array() {
 
-	// Memoize the data so its only read once
 	static $country_data;
 
 	if ( ! isset( $country_data ) ) {
@@ -23,10 +11,6 @@ function countries_array() {
 		$country_data = array();
 
 		$fh = fopen( __DIR__ . '/polygons.properties', 'r' );
-		if ( ! $fh ) {
-			throw new FileException( 'Could not open the polygons.properties file' );
-		}
-
 		while ( ! feof( $fh ) ) {
 
 			$row = fgets( $fh );
@@ -76,7 +60,7 @@ function countries_array() {
  *
  * @see http://alienryderflex.com/polygon/
  */
-function pointInPolygon( $targetX, $targetY, $points_string ) {
+function pointInPolygon( $targetX, $targetY, $points_string, $country_code ) {
 
 	$points      = explode( ',', $points_string );
 	$polyCorners = count( $points );
@@ -93,10 +77,10 @@ function pointInPolygon( $targetX, $targetY, $points_string ) {
 		 * (1/4 of the Earth's circumference) in any direction,
 		 * the answer is "no".
 		 */
-		if ( $targetY && ( intval( abs( $pointY - $targetY ) ) > 90 ) ) {
+		if ( $targetY && ( intval( abs( doubleval($pointY) - $targetY ) ) > 90 ) ) {
 			return false;
 		}
-		if ( $targetX && ( intval( abs( $pointX - $targetX ) ) > 90 ) ) {
+		if ( $targetX && ( intval( abs( doubleval($pointX) - $targetX ) ) > 90 ) ) {
 			return false;
 		}
 
@@ -124,18 +108,18 @@ function pointInPolygon( $targetX, $targetY, $points_string ) {
 /**
  * Get the country code for a pair of lat/long coordinates
  *
- * @param double $longitude decimal longitude
- * @param double $latitude  decimal latitude
+ * @param double $targetX
+ * @param double $targetY
  *
- * @return string country code or empty
+ * @return string
  */
-function get_country( $longitude, $latitude ) {
+function get_country( $targetX, $targetY ) {
 
 	$countries = countries_array();
 
 	foreach ( $countries as $country ) {
 		list( $country_code, $country_boundary ) = $country;
-		if ( pointInPolygon( $longitude, $latitude, $country_boundary, $country_code ) ) {
+		if ( pointInPolygon( $targetX, $targetY, $country_boundary, $country_code ) ) {
 			return $country_code;
 		}
 	}
